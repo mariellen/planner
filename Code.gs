@@ -61,7 +61,7 @@ function getSprints(bgColours) {
       let endDateCell = scheduleRange.getCell(index_sprintEndDateRow, c);
       let endDate = endDateCell.getValue();
 
-      let initiativeCosts = initializeColorCounts(bgColours);
+      let initiativeCosts = initializeColorCosts(bgColours);
 
       let sprintNameAndDate = Array();
       sprintNameAndDate.sprintName = sprintName;
@@ -81,13 +81,13 @@ function getSprints(bgColours) {
   return sprintObj;
 }
 
-function initializeColorCounts(bgColours) {
-  let colorCounts = Array();
+function initializeColorCosts(bgColours) {
+  let colorCosts = Array();
   for (let i = 0; i < bgColours.length; i++) {
     let color = bgColours[i];
-    colorCounts.push({ color: color, count: 0 });
+    colorCosts.push({ colour: color, cost: 0 });
   }
-  return colorCounts;
+  return colorCosts;
 }
 
 
@@ -439,6 +439,7 @@ function calculateDaysPerInitiative(doCosts = false, rebuildSheet = false) {
         }
 
         devToInitiative.push(devObject["Total"]);
+        devToInitiative.push(devObject["Total"] * cost);
         devToInitiative.push();
       }
       else {
@@ -446,7 +447,6 @@ function calculateDaysPerInitiative(doCosts = false, rebuildSheet = false) {
       }
     }
     summarySheet.getRange(1, summarySheetLastColumn + 1 + devRowIndex, devToInitiative.length, 1).setValues(getValuesAs2DArray(devToInitiative));
-
   }
 
   let initiativeCostsBySprint = Array();
@@ -454,18 +454,20 @@ function calculateDaysPerInitiative(doCosts = false, rebuildSheet = false) {
   if (doCosts == true) {
     for (let r = 1; r <= allDevCount; r++) {
       var thisDev = devNames[r];
-      var devCost = thisDev[cost];
-      if (Number(devCost) > 0) {
-        for (let c = 1; c < lastScheduleColumn; c++) {
-          let cell = scheduleRange.getCell(r + index_devNamesBelow, c);
+      var devCost = thisDev.cost;
+      if (devCost > 0) {
+        for (let c = 2; c <= lastScheduleColumn; c++) {
+          let cell = scheduleRange.getCell(r, c);
           let days = cell.getValue();
-          if (Number(days) > 0) {
+          if (days > 0) {
             var costOfThisDevThisInitiativeThisSprint = days * devCost;
-            var columnSprint = sprintNamesAndDates.find(sprint => sprint.sprintColumn === c);
+            var columnSprint = sprintNamesAndDates.find(sprint => sprint.sprintColumn == c);
             if (columnSprint !== undefined) {
               columnSprint.sprintCost += costOfThisDevThisInitiativeThisSprint;
-              columnSprint.initiativeCostsByColour.first(c => c.color == backgroundColour) += costOfThisDevThisInitiativeThisSprint;
-
+              let x = columnSprint.initiativeCostsByColour.find(c => c.colour == backgroundColour)
+              if (x) {
+                x.cost += costOfThisDevThisInitiativeThisSprint;
+              }
             }
           }
         }
@@ -550,29 +552,84 @@ function calculateDaysPerInitiative(doCosts = false, rebuildSheet = false) {
     // put the cost per initiative per sprint
 
     summarySheetLastRow = summarySheet.getLastRow();
-    summarySheetLastColumn = summarySheet.getLastColumn();
+    summarySheetLastColumn = summarySheet.getLastColumn() + 2;
 
-    // for each initiative
-    for (let ro = 1; ro <= initiativesObj.initiatives.length; ro++) {
-      let cell = summarySheet.getRange(ro, index_outputInitiatives);
-      let initiativeColour = cell.getBackground();
-      let initiativeName = initiativesObj.initiatives[ro];
-
-      let thisSprintInitiativeCosts = Array();
-
-      for (let s = 0; s < sprintObj.length; s++) {
-        if (ro == 1) {
-          thisSprintInitiativeCosts.push(initiativeName);
+    // for each sprint
+    /*
+        for (let sprintColumn = 0; sprintColumn <= sprintNamesAndDates.length; sprintColumn++) {
+          let thisSprintInitiativeCosts = Array();
+          for (let initiativeRow = 1; initiativeRow <= initiativesObj.initiatives.length; initiativeRow++) {
+            let cell = summarySheet.getRange(initiativeRow, index_outputInitiatives);
+            let initiativeName = initiativesObj.initiatives[initiativeRow];
+            if (sprintColumn == 0) {
+              if (initiativeRow == 1) {
+                thisSprintInitiativeCosts.push(magic_Initiatives);
+              }
+              thisSprintInitiativeCosts.push(initiativeName);
+            }
+            else {
+              let initiativeColour = cell.getBackground();
+    
+              if (initiativeName !== undefined) {
+                var thisSprint = sprintNamesAndDates[sprintColumn];
+                if (thisSprint !== undefined) {
+                  if (initiativeRow == 1) {
+                    thisSprintInitiativeCosts.push(thisSprint.sprintName);
+                  }
+                  let costOfThisInitiativeThisSprint = thisSprint.initiativeCostsByColour.find(c => c.colour == initiativeColour);
+                  if (costOfThisInitiativeThisSprint !== undefined) {
+                    thisSprintInitiativeCosts.push(costOfThisInitiativeThisSprint.cost);
+                  }
+                }
+              }
+            }
+          }
+          initiativeCostsBySprint.push(thisSprintInitiativeCosts);
         }
-        let costOfThisInitiativeThisSprint = sprintObj.initiativeCostsByColour.first(c => c.color == initiativeColour);
-        thisSprintInitiativeCosts.push(costOfThisInitiativeThisSprint);
+    */
+
+
+    for (let sprintCount = 0; sprintCount < sprintNamesAndDates.length; sprintCount++) {
+      let thisSprintInitiativeCosts = Array();
+      for (let initiativeRow = 0; initiativeRow < initiativesObj.initiatives.length; initiativeRow++) {
+        
+        let cellRow = initiativeRow + 1;
+        let thisSprint = sprintNamesAndDates[sprintCount];
+        let cellColumn = thisSprint.sprintColumn;
+
+        let cell = scheduleSheet.getRange(cellRow, cellColumn);
+        let initiativeName = initiativesObj.initiatives[initiativeRow];
+        if (sprintCount == 0) {
+          if (initiativeRow == 0) {
+            thisSprintInitiativeCosts.push(magic_Initiatives);
+          }
+          thisSprintInitiativeCosts.push(initiativeName);
+        } else {
+          let initiativeColour = cell.getBackground();
+          
+          if (initiativeRow == 0) {
+            thisSprintInitiativeCosts.push(thisSprint.sprintName);
+          }
+          else {
+            let costOfThisInitiativeThisSprint = thisSprint.initiativeCostsByColour.find(c => c.colour == initiativeColour);
+            if (costOfThisInitiativeThisSprint !== undefined) {
+              thisSprintInitiativeCosts.push(costOfThisInitiativeThisSprint.cost);
+            } else {
+              thisSprintInitiativeCosts.push(0);
+            }
+          }
+        }
       }
-      initiativeCostsBySprint.push(thisSprintInitiativeCosts);
+      // initiativeCostsBySprint.push(thisSprintInitiativeCosts);
+      summarySheet.getRange(1, summarySheetLastColumn, thisSprintInitiativeCosts.length, 1).setValues(getValuesAs2DArray(thisSprintInitiativeCosts));
+      summarySheetLastColumn++;
     }
+
+
+
   }
 
 
-  summarySheet.getRange(1, summarySheetLastColumn + 2, initiativeCostsBySprint.length, 1).setValues(getValuesAs2DArray(initiativeCostsBySprint));
 
   summarySheet.autoResizeColumns(1, summarySheet.getLastColumn());
   var columnIndexes = [index_outputCurrentEstimates, index_outputTotalInShedule, index_outputDifferences];
