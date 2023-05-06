@@ -24,11 +24,12 @@ let index_col_outputInitiatives = 1;
 let index_col_outputCurrentEstimates = index_col_outputInitiatives + 1;
 let index_col_outputTotalInShedule = index_col_outputCurrentEstimates + 1;
 let index_col_outputDifferences = index_col_outputTotalInShedule + 1;
-let index_col_outputEstimateRemaining = index_col_outputDifferences + 1;
+let index_col_outputInitiativeCompleteSprint = index_col_outputDifferences + 1;
+let index_col_outputEstimateRemaining = index_col_outputInitiativeCompleteSprint + 1;
 let index_col_outputTotalInSheduleFromCurrentSprint = index_col_outputEstimateRemaining + 1;
 let index_col_outputDifferencesFromCurrentSprint = index_col_outputTotalInSheduleFromCurrentSprint + 1;
 let index_col_outputSprints = index_col_outputDifferencesFromCurrentSprint + 1;
-let index_col_outputInitiativeCompleteSprint = index_col_outputSprints + 1;
+
 let index_col_lookupDevNames = 1;
 let index_col_lookupDevLocation = 2;
 let index_col_lookupDevCost = 3;
@@ -527,7 +528,8 @@ function processSchedule(scheduleSheetName, devObj, sprintObj, initiativeObj) {
           thisInitiativeObj.Days += days;
           thisInitiativeObj.TotalCost += thisSprintCost;
 
-          if (!(new Date(thisSprintObj.End).getTime() <= new Date(currentSprintObj.Start).getTime())) {
+          var includeInCostsFromCurrentSprint = new Date(thisSprintObj.End).getTime() >= new Date(currentSprintObj.Start).getTime();
+          if (includeInCostsFromCurrentSprint) {
             thisInitiativeObj.CostFromCurrentSprint += thisSprintCost;
           }
           if (!Object.values(thisInitiativeObj.Sprints).includes(thisSprintObj.Name)) {
@@ -545,7 +547,7 @@ function processSchedule(scheduleSheetName, devObj, sprintObj, initiativeObj) {
           //increase the developer days
           thisDev.Days += days;
           thisDev.TotalCost += thisSprintCost;
-          if (!(new Date(thisSprintObj.End).getTime() <= new Date(thisSprintObj.Start).getTime())) {
+          if (includeInCostsFromCurrentSprint) {
             thisDev.CostFromCurrentSprint += thisSprintCost;
           }
           thisDev.Initiatives.find(i => i.BackgroundColour == cellBackground).Cost += thisSprintCost;
@@ -784,16 +786,16 @@ function populateInternalAndExternalCosts(summarySheetName, scheduleSheetName, i
   summarySheet.getRange(1, summarySheetLastColumn + 3, externalcostToInitiative.length, 1).setValues(getValuesAs2DArray(externalcostToInitiative));
   summarySheet.getRange(1, summarySheetLastColumn + 4, externalcostToInitiativeFromCurrentSprint.length, 1).setValues(getValuesAs2DArray(externalcostToInitiativeFromCurrentSprint));
 
-  summarySheet.getRange(summarySheet.getLastRow(), 1, 1, summarySheet.getLastColumn()).setNumberFormat("$00.00");
-  summarySheet.getRange(summarySheet.getLastRow(), 1, 1, summarySheet.getLastColumn()).setFontWeight("bold");
+  summarySheet.getRange(summarySheet.getLastRow() -1, 1, 2, summarySheet.getLastColumn()).setNumberFormat("$00.00");
+  summarySheet.getRange(summarySheet.getLastRow() -1, 1, 2, summarySheet.getLastColumn()).setFontWeight("bold");
   summarySheet.getRange(1, summarySheet.getLastColumn() - 1, summarySheet.getLastRow(), 2).setNumberFormat("$00.00");
-  summarySheet.getRange(1, summarySheet.getLastColumn() - 1, summarySheet.getLastRow(), 2).setFontWeight("bold");
+  //summarySheet.getRange(1, summarySheet.getLastColumn() - 1, summarySheet.getLastRow(), 2).setFontWeight("bold");
 
   // UPDATE THE SCHEDULE SHEET
 
   setFirstCellValue(scheduleSheetName, totalExternalCost);
   let scheduleSheet = SpreadsheetApp.getActive().getSheetByName(scheduleSheetName);
-  var bottomRowToUse = Object.keys(devObj).length + index_row_scheduleDevNamesBelow + 6;
+  var bottomRowToUse = Object.keys(devObj).length + index_row_scheduleDevNamesBelow + 7;
 
   sourceRange = getLastThreeColumnsRange(summarySheetName, Object.keys(initiativesObj).length + 2); // also get the totals
   transposeDataWithFormat(scheduleSheetName, bottomRowToUse, sourceRange, magic_RangeTypeInitiativeCosts);
@@ -975,7 +977,7 @@ function updateScheduleWithEstimates(summarySheetName, scheduleSheetName, devsOb
   scheduleSheet.getRange(allDevCount + index_row_scheduleDevNamesBelow + 1, 1, scheduleSheet.getLastRow(), scheduleSheet.getLastColumn()).clearContent();
   scheduleSheet.getRange(allDevCount + index_row_scheduleDevNamesBelow + 1, 1, scheduleSheet.getLastRow(), scheduleSheet.getLastColumn()).clearFormat();
   let targetRow = allDevCount + index_row_scheduleDevNamesBelow + 2;
-  var sourceRange = summarySheet.getRange('A1:D' + Object.keys(initiativesObj).length + 1); // add on 1 because of header row
+  var sourceRange = summarySheet.getRange('A1:E' + Object.keys(initiativesObj).length + 1); // add on 1 because of header row
   transposeDataWithFormat(scheduleSheetName, targetRow, sourceRange, magic_RangeTypeEstimates);
 }
 
@@ -1106,6 +1108,7 @@ function updateSummarySheet(summarySheetName, initiativesObj, sprintObj) {
   summarySheet.getRange(1, index_col_outputEstimateRemaining, 1, 1).setValue(magic_HeadingEstimateRemaining + " " + currentSprintObject.Name);
   summarySheet.getRange(1, index_col_outputTotalInSheduleFromCurrentSprint, 1, 1).setValue(magic_HeadingTotalInScheduleFromCurrentSprint + " " + currentSprintObject.Name);
   summarySheet.getRange(1, index_col_outputDifferencesFromCurrentSprint, 1, 1).setValue(magic_HeadingTotalInScheduleFromCurrentSprint + " " + currentSprintObject.Name + " " + magic_HeadingDifferences);
+  summarySheet.getRange(1, index_col_outputInitiativeCompleteSprint, 1, 1).setValue(magic_HeadingInitiativeCompletedInSprints);
   return summarySheet;
 }
 
