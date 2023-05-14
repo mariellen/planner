@@ -414,7 +414,7 @@ function applyConditionalFormatting(columnIndex, range, sheet, initiative, forma
     .setBold(formatObjects[magic_formatHeapsOver].Weight == "Bold")
     .setRanges([range])
     .build();
-    
+
 
   // when the difference between remaining and scheduled amount is less than moderateUnderMidRange and more than moreUnderMidRange
   let moderateUnderRuleFormula = `=AND(${clR}>=${moreUnderMidRange}%,${clR}<=${moderateUnderMidRange}%)`;
@@ -425,7 +425,7 @@ function applyConditionalFormatting(columnIndex, range, sheet, initiative, forma
     .setFontColor(formatObjects[magic_formatUnder].FontColour)
     .setBold(formatObjects[magic_formatUnder].Weight == "Bold")
     .setRanges([range])
-    .build();    
+    .build();
 
 
   // when the difference between remaining and scheduled amount is less than moderateUnderMidRange and more than moreUnderMidRange
@@ -437,8 +437,8 @@ function applyConditionalFormatting(columnIndex, range, sheet, initiative, forma
     .setFontColor(formatObjects[magic_formatHeapsUnder].FontColour)
     .setBold(formatObjects[magic_formatHeapsUnder].Weight == "Bold")
     .setRanges([range])
-    .build();      
-  
+    .build();
+
   const rules = sheet.getConditionalFormatRules();
   rules.push(moreOverRule, moderateOverRule, greatRule, moderateUnderRule, moreUnderRule);
   sheet.setConditionalFormatRules(rules);
@@ -783,7 +783,13 @@ function populateSummaryWithEstimates(summarySheetName, initiativesObj, sprintOb
 
   }
   remaining.push(totalRemaining);
-  uncertainties.push(totalUncertainty);
+  if (totalUncertainty == 0 || Object.keys(initiativesObj).length == 0) {
+    uncertainties.push(0);
+  }
+  else {
+    uncertainties.push(Math.round(totalUncertainty / Object.keys(initiativesObj).length));
+  }
+
 
   if (scheduledDays.length === 0) {
 
@@ -812,15 +818,23 @@ function populateSummaryWithEstimates(summarySheetName, initiativesObj, sprintOb
   summarySheet.getRange(2, index_col_outputTotalInSheduleFromCurrentSprint, scheduledDaysFromCurrentSprint.length, 1).setValues(getValuesAs2DArray(scheduledDaysFromCurrentSprint));
   summarySheet.getRange(2, index_col_outputUncertainty, uncertainties.length, 1).setValues(getValuesAs2DArray(uncertainties));
 
-  if (differences.length != 0) {
-    const totaldifferences = differences.reduce((accumulator, currentValue) => Number(accumulator) + Number(currentValue));
+  if (differences.length != 0 && Object.keys(initiativesObj).length != 0) {
+    const totaldifferences = differences.reduce((accumulator, currentValue) => Number(accumulator) + Number(currentValue))/Object.keys(initiativesObj).length;
+    
     differences.push(totaldifferences);
     summarySheet.getRange(2, index_col_outputDifferences, differences.length, 1).setValues(getValuesAs2DArray(differences));
   }
-  if (differencesFromCurrentSprint.length != 0) {
-    const totaldifferencesFromCurrentSprint = differencesFromCurrentSprint.reduce((accumulator, currentValue) => Number(accumulator) + Number(currentValue));
+  else {
+    differences.push(0);
+  }
+
+  if (differencesFromCurrentSprint.length != 0 && Object.keys(initiativesObj).length != 0) {
+    const totaldifferencesFromCurrentSprint = (differencesFromCurrentSprint.reduce((accumulator, currentValue) => Number(accumulator) + Number(currentValue)))/Object.keys(initiativesObj).length;
     differencesFromCurrentSprint.push(totaldifferencesFromCurrentSprint);
     summarySheet.getRange(2, index_col_outputDifferencesFromCurrentSprint, differencesFromCurrentSprint.length, 1).setValues(getValuesAs2DArray(differencesFromCurrentSprint));
+  }
+  else {
+    differencesFromCurrentSprint.push(0);
   }
 
   if (initiativeCompleteSprint.length != 0) {
