@@ -1,0 +1,14 @@
+{
+  "timeZone": "Australia/Sydney",
+  "dependencies": {
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "sheets": {
+    "macros": [{
+      "menuName": "Sort by ordering",
+      "functionName": "Sortbyordering",
+      "defaultShortcut": "Ctrl+Alt+Shift+1"
+    }]
+  }
+}
