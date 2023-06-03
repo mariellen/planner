@@ -752,8 +752,12 @@ function populateSummaryWithEstimates(summarySheetName, initiativesObj, sprintOb
       var lastSprint = sprintThing[sprintThing.length - 1];
       concatSprintNamesPerInitiative.push(sprintThing.map(sprint => sprint).join(', '));
 
-      let sprintEndDate = sprintObj.find(s => s.Name == lastSprint).End;
-      initiativeCompleteSprint.push(sprintEndDate);
+      if (lastSprint !== undefined)
+      {
+        let sprintEndDate = sprintObj.find(s => s.Name == lastSprint).End;
+        initiativeCompleteSprint.push(sprintEndDate);
+      }
+      
       initiativePointsComplete.push(thisInitiative.PointsComplete);
 
       let totalFromCurrentSprint = 0
